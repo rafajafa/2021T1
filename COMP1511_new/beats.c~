@@ -1,0 +1,322 @@
+// Assignment 2 21T1 COMP1511: Beats by CSE
+// beats.c
+//
+// This program was written by Raphael Woo (z5555555)
+// on 9/4/2021
+//
+// Version 1.0.0: Assignment released.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
+// Add any extra #includes your code needs here.
+
+#include "beats.h"
+
+// Add your own #defines here.
+
+//////////////////////////////////////////////////////////////////////
+
+// You don't have to use the provided struct track, you are free to
+// make your own struct instead.
+// If you use the provided struct track, you will have to add fields
+// to store other information.
+
+struct track {
+    // TODO: You will have to add extra fields here in Stage 2.
+    struct beat *head;
+    struct beat *curr;
+};
+
+// You don't have to use the provided struct beat, you are free to
+// make your own struct instead.
+// If you use the provided struct beat, you may add fields
+// to it to store other information.
+
+struct beat {
+    // You may choose to add or change fields in this struct.
+    struct note *notes;
+    struct beat *next;
+};
+
+// You don't have to use the provided struct note, you are free to
+// make your own struct instead.
+// If you use the provided struct note, you add fields
+// to it to store other information.
+
+struct note {
+    // You may choose to add or change fields in this struct.
+    int octave;
+    int key;
+    struct note *next;
+};
+
+// Add any other structs you define here.
+
+//////////////////////////////////////////////////////////////////////
+
+// Add prototypes for any extra functions you create here.
+
+//create a new_note with octave and key and a pointer pointing new_next
+// return new_note
+struct note *create_note(int octave, int key, struct note* new_next) {
+    struct note *new_note = malloc(sizeof (struct note));
+    new_note->octave = octave;
+    new_note->key = key;
+    new_note->next = new_next;
+    return new_note;
+}
+
+// loop thorugh the note and see if the input octave and key is the highest
+// return NOT_HIGHEST_NOTE or 0
+int check_highest_note(Beat beat, int octave, int key) {
+    int check_note = 0;
+    struct note *curr = beat->notes;
+    while (curr != NULL) {
+        if (curr->octave > octave) {
+            //if the input octave is smaller than octave before
+            check_note = NOT_HIGHEST_NOTE;
+        } else if (curr->octave == octave && curr->key >= key) {
+            //if octave is the same and input key is smaller 
+            check_note = NOT_HIGHEST_NOTE;
+        }
+        curr = curr->next;
+    }
+    return check_note;
+}
+
+// loop through the beat in track and return the number of beat in track
+int count_beats_in_track(Track track) {
+    int beat_number = 0;
+    Beat curr = track->head;
+    while (curr != NULL) {
+        beat_number++;
+        curr = curr->next;
+    }
+    return beat_number;
+}
+
+// Return a malloced Beat with fields initialized.
+Beat create_beat(void) {
+    Beat new_beat = malloc(sizeof (struct beat));
+    assert(new_beat != NULL);
+
+    new_beat->next = NULL;
+    new_beat->notes = NULL;
+
+    // You do not need to change this function, unless you change
+    // the implementation of struct beat.
+
+    return new_beat;
+}
+
+// You need to implement the following functions.
+// You can find descriptions of what each function should do in beats.h
+
+//////////////////////////////////////////////////////////////////////
+//                        Stage 1 Functions                         //
+//////////////////////////////////////////////////////////////////////
+
+// Add a note to the end of a beat.
+int add_note_to_beat(Beat beat, int octave, int key) {
+    int valid_note = 0;
+    if (octave < 0 || octave >= 10) {
+        // if octave is invalid
+        valid_note = INVALID_OCTAVE;
+    } else if (key < 0 || key >= 12) {
+        // if key is invalid
+        valid_note = INVALID_KEY;
+    } else if (check_highest_note(beat, octave, key) == NOT_HIGHEST_NOTE) {
+        // if not highest note
+        valid_note = NOT_HIGHEST_NOTE;
+    }else {
+        if (beat->notes == NULL) {
+            // if the beat is empty, create the first note
+            struct note *new_note = create_note(octave, key, NULL);
+            beat->notes = new_note;
+        } else {
+            // else loop through all the previous note and add the new note
+            // to the end of it
+            struct note *curr = beat->notes;
+            struct note *prev = NULL;
+            while (curr != NULL) {
+                prev = curr;
+                curr = curr->next;
+            }
+            struct note *new_note = create_note(octave, key, NULL);
+            prev->next = new_note;
+        }       
+    }    
+    
+    return valid_note;
+}
+
+// Print the contents of a beat.
+void print_beat(Beat beat) {
+    int i = 0;
+    struct note *curr = beat->notes;
+    if (curr == NULL) {
+        printf("\n");
+    } else {
+        while (curr != NULL) {
+            //loop through the note and print out all of it
+            if (i == 0) {
+                // if it is the first note print
+                printf("%d %02d ", curr->octave, curr->key);
+                curr = curr->next;
+                i++;
+            } else {
+                printf("| %d %02d ", curr->octave, curr->key);
+                curr = curr->next;
+                i++;
+            }
+        }
+        printf("\n");    
+    }
+    return;
+}
+
+// Count the number of notes in a beat that are in a given octave.
+// loop through the loop and when octave matches the given octave, num_note++ 
+int count_notes_in_octave(Beat beat, int octave) {
+    int num_note = 0;
+    struct note *curr = beat->notes;
+    while (curr != NULL) {
+        if (curr->octave == octave) {
+            //the octave in that note is equal to given octave
+            num_note++;          
+        }
+        curr = curr->next;
+    }
+    
+    return num_note;
+}
+
+//////////////////////////////////////////////////////////////////////
+//                        Stage 2 Functions                         //
+//////////////////////////////////////////////////////////////////////
+
+// Return a malloced track with fields initialized.
+Track create_track(void) {
+    // Note: there is no fprintf in this function, as the
+    // Stage 1 autotests call create_track but expect it to return NULL
+    // (so this function should do nothing in Stage 1).
+    Track new_track = malloc(sizeof (struct track));
+    new_track->curr = NULL;
+    new_track->head = NULL;
+    
+    return new_track;
+}
+
+// Add a beat after the current beat in a track.
+void add_beat_to_track(Track track, Beat beat) {
+    
+    if (track->head == NULL) {
+        // if the track is empty, both curr and head will point to the 
+        // new beat
+        Beat new_beat = create_beat();
+        track->head = new_beat;
+    }else {
+        // else (if there is any beat in track) loop throught the previous beat
+        // and add the new beat to the end of the track
+        Beat curr = track->head;
+        Beat prev = NULL;
+        while (curr != NULL) {
+            prev = curr;
+            curr = curr->next;
+        }
+        Beat new_beat = create_beat();
+        prev->next = new_beat;
+    }
+    //printf("add_beat_to_track not implemented yet.\n");
+    return;
+}
+
+// Set a track's current beat to the next beat.
+int select_next_beat(Track track) {
+    //TRACK_STOPPED = 0
+    int num_beat = count_beats_in_track(track);
+    int track_number = TRACK_STOPPED;
+    if (track_number > num_beat) {
+        // if it reach the end of beat 
+        track_number = TRACK_STOPPED;
+    }
+    if (track->curr == NULL) {
+        // if the curr pointer is point at NULL
+        // point at the first beat or the end of beat
+        track->curr = track->head;
+        track_number++;
+    } else {
+        // otherwise point at the next beat_number
+        track->curr = track->curr->next;
+        track_number++;
+    }
+    
+    //printf("select_next_beat not implemented yet.\n");
+    return track_number;
+}
+
+// Print the contents of a track.
+void print_track(Track track) {
+    Beat curr = track->head;
+    int i = 0;
+    while (curr != NULL) {
+        // while the beat dont point to NULL, print all the note in that beat 
+        // and move on to next beat       
+        i++;
+        if (track->curr == curr) {
+            //if the beat is being constructing
+            printf(">");
+        } else {
+            printf(" ");
+        }
+        printf("[%d] ", i); 
+        print_beat(track->head); 
+        
+        curr = curr->next;
+    }
+    //printf("print_track not implemented yet.\n");
+    return;
+}
+
+// Count beats after the current beat in a track.
+// loop through all the beat and return the number 
+int count_beats_left_in_track(Track track) {
+    int beat_number = 0;
+    Beat curr = track->head;
+    while (curr != NULL) {
+        beat_number++;
+        curr = curr->next;
+    }
+    
+    return beat_number;
+}
+
+//////////////////////////////////////////////////////////////////////
+//                        Stage 3 Functions                         //
+//////////////////////////////////////////////////////////////////////
+
+// Free the memory of a beat, and any memory it points to.
+void free_beat(Beat beat) {
+    // Note: there is no printf in this function, as the
+    // Stage 1 & 2 autotests call free_beat but don't check whether
+    // the memory has been freed (so this function should do nothing in
+    // Stage 1 & 2, rather than print an error).
+    return;
+}
+
+// Free the memory of a track, and any memory it points to.
+void free_track(Track track) {
+    // Note: there is no printf in this function, as the
+    // Stage 1 & 2 autotests call free_track but don't check whether
+    // the memory has been freed (so this function should do nothing in
+    // Stage 1 & 2, rather than print an error).
+    return;
+}
+
+// Remove the currently selected beat from a track.
+int remove_selected_beat(Track track) {
+    printf("remove_selected_beat not implemented yet.");
+    return TRACK_STOPPED;
+}
